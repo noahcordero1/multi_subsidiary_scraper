@@ -39,7 +39,7 @@ CONSULTING_COMPANIES = [
     'Booz Allen Hamilton', 'L.E.K.', 'Strategy&', 'Monitor Deloitte',
     'Nagarro', 'TCS', 'Infosys', 'Wipro', 'Cognizant', 'HCL', 'Tech Mahindra',
     'CGI', 'Atos', 'NTT Data', 'DXC Technology', 'Slalom', 'BearingPoint',
-    'Sopra Steria', 'T-Systems', 'Fujitsu', 'NEC', 'Unisys', 'Horvath & Partner Management'
+    'Sopra Steria', 'T-Systems', 'Fujitsu', 'NEC', 'Unisys', 'Horvath & Partner'
 ]
 
 # Page configuration
@@ -177,28 +177,59 @@ def create_market_overview(df):
     st.markdown('<div class="main-header">📊 Market Overview</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Overall market metrics
-    consulting_df = df[df['Is_Consulting'] == True]
+    # Executive Summary KPIs
+    st.markdown('<div class="section-header">🎯 Executive Summary</div>', unsafe_allow_html=True)
     
+    # Calculate key metrics
+    consulting_df = df[df['Is_Consulting'] == True]
+    total_contracts = len(df)
+    total_value = df['Summe_Clean'].sum()
+    consulting_value = consulting_df['Summe_Clean'].sum()
+    consulting_share = (consulting_value / total_value) * 100 if total_value > 0 else 0
+    avg_competition = df['Bieter'].mean()
+    
+    # Executive KPI Cards
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        total_contracts = len(df)
-        st.metric("Total Contracts", f"{total_contracts:,}")
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, {CUSTOM_COLORS['secondary']} 0%, {CUSTOM_COLORS['gray2']} 100%); 
+                    padding: 1.5rem; border-radius: 10px; color: white; text-align: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0; font-size: 2.5rem;">€{total_value/1000000:.1f}M</h2>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1.1rem;">Total Market Size</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        total_value = df['Summe_Clean'].sum()
-        st.metric("Total Market Value", f"€{total_value:,.0f}")
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, {CUSTOM_COLORS['secondary']} 0%, {CUSTOM_COLORS['gray2']} 100%); 
+                    padding: 1.5rem; border-radius: 10px; color: white; text-align: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0; font-size: 2.5rem;">{consulting_share:.1f}%</h2>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1.1rem;">Consulting Market Share</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        unique_suppliers = df['Lieferant_Clean'].nunique()
-        consulting_share = len(consulting_df) / len(df) * 100 if len(df) > 0 else 0
-        st.metric("Total Suppliers", f"{unique_suppliers:,}", 
-                 f"{consulting_share:.1f}% consulting")
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, {CUSTOM_COLORS['secondary']} 0%, {CUSTOM_COLORS['gray2']} 100%); 
+                    padding: 1.5rem; border-radius: 10px; color: white; text-align: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0; font-size: 2.5rem;">{avg_competition:.1f}</h2>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1.1rem;">Avg Competition</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col4:
-        avg_contract_value = df['Summe_Clean'].mean()
-        st.metric("Avg Contract Value", f"€{avg_contract_value:,.0f}")
+        # Market concentration
+        top5_value = df.groupby('Lieferant_Clean')['Summe_Clean'].sum().sort_values(ascending=False).head(5).sum()
+        concentration = (top5_value / total_value) * 100 if total_value > 0 else 0
+        
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, {CUSTOM_COLORS['secondary']} 0%, {CUSTOM_COLORS['gray2']} 100%); 
+                    padding: 1.5rem; border-radius: 10px; color: white; text-align: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0; font-size: 2.5rem;">{concentration:.0f}%</h2>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1.1rem;">Top 5 Market Share</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Market composition analysis
     st.markdown('<div class="section-header">Market Composition</div>', unsafe_allow_html=True)
@@ -271,7 +302,7 @@ def create_market_overview(df):
         
         with col3:
             consulting_share_value = (consulting_value / total_value) * 100
-            st.metric("Consulting Market Share", f"{consulting_share_value:.1f}%", "by value")
+            st.metric("Consulting Market Share", f"{consulting_share_value:.1f}%")
 
 def create_company_analysis(df):
     """Create detailed company analysis section"""
@@ -1283,8 +1314,7 @@ def main():
         st.session_state.using_uploaded_data = False
         st.session_state.uploaded_df = None
     
-    # Use uploaded data if available, otherwise use original
-    df = st.session_state.uploaded_df if (st.session_state.using_uploaded_data and st.session_state.uploaded_df is not None) else original_df
+    # Data selection will happen after all session state management
     
     # Sidebar navigation - balanced approach
     # Add Horvath & Partners logo to sidebar - centered
@@ -1294,99 +1324,7 @@ def main():
     st.sidebar.markdown('<h1 style="text-align: center;">📊 Dashboard</h1>', unsafe_allow_html=True)
     st.sidebar.markdown("---")
     
-    # Upload CSV section
-    st.sidebar.markdown("📁 **Upload New Data**")
-    uploaded_file = st.sidebar.file_uploader(
-        "Choose a CSV file",
-        type=['csv'],
-        help="Upload a CSV file with the same format as the original data. Must include columns: Bezeichnung, Lieferant, Kategorie (CPV Hauptteil), Bieter, Summe, Aktualisiert"
-    )
-    
-    # Handle file upload
-    if uploaded_file is not None:
-        try:
-            # Read uploaded file
-            uploaded_df = pd.read_csv(uploaded_file)
-            
-            # Validate format
-            validate_csv_format(uploaded_df)
-            
-            # Process the uploaded data
-            processed_df = process_dataframe(uploaded_df)
-            
-            # Store in session state
-            st.session_state.uploaded_df = processed_df
-            st.session_state.using_uploaded_data = True
-            
-            # Update df for current session
-            df = processed_df
-            
-            # Success message
-            st.sidebar.success(f"✅ Successfully loaded {len(df):,} contracts from uploaded file!")
-            
-            # Show data info
-            st.sidebar.info(f"📊 **Current Data:** Uploaded CSV\n\n📋 {len(df):,} contracts\n🏢 {df['Lieferant_Clean'].nunique():,} suppliers")
-            
-        except Exception as e:
-            st.sidebar.error(f"❌ Upload failed: {str(e)}")
-            # Keep using original data
-            df = original_df
-            st.session_state.using_uploaded_data = False
-    
-    # Reset to original data button
-    if st.session_state.using_uploaded_data:
-        if st.sidebar.button("🔄 Reset to Original Data", key="reset_data_btn"):
-            # Clear all session state related to uploaded data
-            st.session_state.using_uploaded_data = False
-            st.session_state.uploaded_df = None
-            
-            # Clear any cached data and filter states
-            if 'market_filter' in st.session_state:
-                del st.session_state.market_filter
-            if 'consulting_filter' in st.session_state:
-                del st.session_state.consulting_filter
-            if 'category_top_n' in st.session_state:
-                del st.session_state.category_top_n
-            
-            # Force refresh the page
-            st.success("✅ Reset to original data successful!")
-            st.rerun()
-    
-    # Data source indicator with additional controls
-    if st.session_state.using_uploaded_data:
-        st.sidebar.markdown("🔵 **Using uploaded data**")
-        
-        # Add warning and additional reset option
-        st.sidebar.warning("⚠️ You are currently viewing uploaded data. All analyses reflect the uploaded dataset.")
-        
-        # Alternative reset method with expander
-        with st.sidebar.expander("🔄 Data Management"):
-            st.write("**Current Status:** Using uploaded CSV file")
-            st.write(f"**Contracts:** {len(df):,}")
-            st.write(f"**Suppliers:** {df['Lieferant_Clean'].nunique():,}")
-            
-            if st.button("↩️ Switch Back to Original Data", key="reset_data_expanded"):
-                # Clear everything and reset
-                for key in list(st.session_state.keys()):
-                    if key.startswith(('market_', 'consulting_', 'category_')):
-                        del st.session_state[key]
-                
-                st.session_state.using_uploaded_data = False
-                st.session_state.uploaded_df = None
-                st.success("🔄 Switched back to original data!")
-                st.rerun()
-    else:
-        st.sidebar.markdown("🟢 **Using original data**")
-        
-        # Show original data info
-        with st.sidebar.expander("📊 Original Data Info"):
-            st.write(f"**Source:** Single subsidiary scraper")
-            st.write(f"**Contracts:** {len(original_df):,}")
-            st.write(f"**Suppliers:** {original_df['Lieferant_Clean'].nunique():,}")
-            st.write(f"**Last Updated:** Based on scraper run")
-    
-    st.sidebar.markdown("---")
-    
+    # Navigation at the top
     page = st.sidebar.selectbox(
         "Choose Analysis:",
         [
@@ -1399,7 +1337,10 @@ def main():
         ]
     )
     
-    # Data filters
+    # Use uploaded data if available, otherwise use original (after all session state management)
+    df = st.session_state.uploaded_df if (st.session_state.using_uploaded_data and st.session_state.uploaded_df is not None) else original_df
+    
+    # Data filters - right after navigation
     st.sidebar.header("🔧 Filters")
     
     # Company type filter
@@ -1417,6 +1358,109 @@ def main():
     else:
         df_base_filtered = df
     
+    st.sidebar.markdown("---")
+    
+    # Upload CSV section - compact
+    with st.sidebar.expander("📁 Upload New Data"):
+        uploaded_file = st.file_uploader(
+            "Choose CSV file",
+            type=['csv'],
+            help="Upload CSV with same format as original data"
+        )
+    
+    # Handle file upload
+    if uploaded_file is not None:
+        try:
+            # Read uploaded file
+            uploaded_df = pd.read_csv(uploaded_file)
+            
+            # Validate format
+            validate_csv_format(uploaded_df)
+            
+            # Process the uploaded data
+            processed_df = process_dataframe(uploaded_df)
+            
+            # Store in session state
+            st.session_state.uploaded_df = processed_df
+            st.session_state.using_uploaded_data = True
+            
+            # Success message
+            st.sidebar.success(f"✅ Successfully loaded {len(processed_df):,} contracts from uploaded file!")
+            
+            # Show data info
+            st.sidebar.info(f"📊 **Current Data:** Uploaded CSV\n\n📋 {len(processed_df):,} contracts\n🏢 {processed_df['Lieferant_Clean'].nunique():,} suppliers")
+            
+            # Force rerun to update the data selection
+            st.rerun()
+            
+        except Exception as e:
+            st.sidebar.error(f"❌ Upload failed: {str(e)}")
+            # Keep using original data
+            st.session_state.using_uploaded_data = False
+    
+    # Reset to original data button
+    if st.session_state.using_uploaded_data:
+        if st.sidebar.button("🔄 Reset to Original Data", key="reset_data_btn"):
+            # Clear all session state related to uploaded data
+            st.session_state.using_uploaded_data = False
+            st.session_state.uploaded_df = None
+            
+            # Clear any cached data and filter states
+            keys_to_delete = []
+            for key in st.session_state.keys():
+                if key.startswith(('market_', 'consulting_', 'category_')):
+                    keys_to_delete.append(key)
+            
+            for key in keys_to_delete:
+                del st.session_state[key]
+            
+            # Clear any streamlit cache
+            st.cache_data.clear()
+            
+            # Force refresh the page
+            st.rerun()
+    
+    # Data source indicator with additional controls
+    if st.session_state.using_uploaded_data:
+        st.sidebar.markdown("🔵 **Using uploaded data**")
+        
+        # Add warning and additional reset option
+        st.sidebar.warning("⚠️ You are currently viewing uploaded data. All analyses reflect the uploaded dataset.")
+        
+        # Alternative reset method with expander
+        with st.sidebar.expander("🔄 Data Management"):
+            st.write("**Current Status:** Using uploaded CSV file")
+            st.write(f"**Contracts:** {len(df):,}")
+            st.write(f"**Suppliers:** {df['Lieferant_Clean'].nunique():,}")
+            
+            if st.button("↩️ Switch Back to Original Data", key="reset_data_expanded"):
+                # Clear everything and reset
+                keys_to_delete = []
+                for key in st.session_state.keys():
+                    if key.startswith(('market_', 'consulting_', 'category_')):
+                        keys_to_delete.append(key)
+                
+                for key in keys_to_delete:
+                    del st.session_state[key]
+                
+                st.session_state.using_uploaded_data = False
+                st.session_state.uploaded_df = None
+                
+                # Clear any streamlit cache
+                st.cache_data.clear()
+                
+                st.rerun()
+    else:
+        st.sidebar.markdown("🟢 **Using original data**")
+        
+        # Show original data info
+        with st.sidebar.expander("📊 Original Data Info"):
+            st.write(f"**Source:** Single subsidiary scraper")
+            st.write(f"**Contracts:** {len(original_df):,}")
+            st.write(f"**Suppliers:** {original_df['Lieferant_Clean'].nunique():,}")
+            st.write(f"**Last Updated:** Based on scraper run")
+    
+    
     # Display selected page
     if page == "Market Overview":
         create_market_overview(df)  # Always use full dataset for overview
@@ -1431,45 +1475,45 @@ def main():
     elif page == "Company Deep Dive":
         create_company_deep_dive(df_base_filtered)
     
-    # Download section
+    
+    # Compact download section at bottom
     st.sidebar.markdown("---")
-    st.sidebar.markdown("💾 **Download Data**")
-    
-    # Prepare filtered data based on current company filter
-    if company_filter == "Consulting Only":
-        download_df = df[df['Is_Consulting'] == True]
-        download_label = "consulting_contracts"
-    elif company_filter == "Non-Consulting Only":
-        download_df = df[df['Is_Consulting'] == False]
-        download_label = "non_consulting_contracts"
-    else:
-        download_df = df
-        download_label = "all_contracts"
-    
-    # Convert DataFrame to CSV
-    csv_data = download_df.to_csv(index=False)
-    
-    # Download button
-    st.sidebar.download_button(
-        label=f"📥 Download {download_label.replace('_', ' ').title()} CSV",
-        data=csv_data,
-        file_name=f"obb_procurement_{download_label}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv",
-        help=f"Download {len(download_df):,} contracts as CSV file"
-    )
-    
-    # Also provide option to download consulting companies only
-    if company_filter != "Consulting Only":
-        consulting_df = df[df['Is_Consulting'] == True]
-        if not consulting_df.empty:
-            consulting_csv = consulting_df.to_csv(index=False)
-            st.sidebar.download_button(
-                label="📥 Download Consulting Only CSV",
-                data=consulting_csv,
-                file_name=f"obb_procurement_consulting_only_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                help=f"Download {len(consulting_df):,} consulting contracts as CSV file"
-            )
+    with st.sidebar.expander("💾 Download Data"):
+        # Prepare filtered data based on current company filter
+        if company_filter == "Consulting Only":
+            download_df = df[df['Is_Consulting'] == True]
+            download_label = "consulting_contracts"
+        elif company_filter == "Non-Consulting Only":
+            download_df = df[df['Is_Consulting'] == False]
+            download_label = "non_consulting_contracts"
+        else:
+            download_df = df
+            download_label = "all_contracts"
+        
+        # Convert DataFrame to CSV
+        csv_data = download_df.to_csv(index=False)
+        
+        # Download button
+        st.download_button(
+            label=f"📥 {download_label.replace('_', ' ').title()}",
+            data=csv_data,
+            file_name=f"obb_procurement_{download_label}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            help=f"Download {len(download_df):,} contracts as CSV file"
+        )
+        
+        # Also provide option to download consulting companies only
+        if company_filter != "Consulting Only":
+            consulting_df = df[df['Is_Consulting'] == True]
+            if not consulting_df.empty:
+                consulting_csv = consulting_df.to_csv(index=False)
+                st.download_button(
+                    label="📥 Consulting Only",
+                    data=consulting_csv,
+                    file_name=f"obb_procurement_consulting_only_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    help=f"Download {len(consulting_df):,} consulting contracts as CSV file"
+                )
     
     # Footer with balanced stats
     st.sidebar.markdown("---")
