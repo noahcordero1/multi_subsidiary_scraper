@@ -18,6 +18,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import re
 from collections import Counter
+import os
 
 # Custom Color Palette
 CUSTOM_COLORS = {
@@ -41,6 +42,35 @@ CONSULTING_COMPANIES = [
     'CGI', 'Atos', 'NTT Data', 'DXC Technology', 'Slalom', 'BearingPoint',
     'Sopra Steria', 'T-Systems', 'Fujitsu', 'NEC', 'Unisys', 'Horvath & Partner'
 ]
+
+def get_image_path(filename):
+    """Get the correct path for image files regardless of deployment environment"""
+    possible_paths = [
+        filename,  # Same directory as script
+        os.path.join(os.path.dirname(__file__), filename),  # Relative to script location
+        f"single_subsidiary/dashboard/{filename}",  # Streamlit Cloud path
+        os.path.join("single_subsidiary", "dashboard", filename),  # Alternative path
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    
+    # If no image found, return None so we can handle gracefully
+    return None
+
+def safe_display_image(image_path, **kwargs):
+    """Safely display an image, with fallback if not found"""
+    full_path = get_image_path(image_path)
+    if full_path and os.path.exists(full_path):
+        try:
+            st.image(full_path, **kwargs)
+        except Exception as e:
+            # If image fails to load, show a placeholder or skip
+            st.write(f"*[{image_path} - logo placeholder]*")
+    else:
+        # Image not found, show placeholder text
+        st.write(f"*[{image_path} - logo placeholder]*")
 
 # Page configuration
 st.set_page_config(
@@ -184,7 +214,7 @@ def create_market_overview(df):
     # Add Horvath & Partners logo to top right
     col1, col2 = st.columns([3, 1])
     with col2:
-        st.image("horvath-partners.jpg", width=400)
+        safe_display_image("horvath-partners.jpg", width=400)
     
     st.markdown('<div class="main-header">📊 Market Overview</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -321,7 +351,7 @@ def create_company_analysis(df):
     # Add Horvath & Partners logo to top right
     col1, col2 = st.columns([3, 1])
     with col2:
-        st.image("horvath-partners.jpg", width=400)
+        safe_display_image("horvath-partners.jpg", width=400)
     
     st.markdown('<div class="main-header">🏢 Company Analysis</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -390,7 +420,7 @@ def create_market_share_analysis(df):
     # Add Horvath & Partners logo to top right
     col1, col2 = st.columns([3, 1])
     with col2:
-        st.image("horvath-partners.jpg", width=400)
+        safe_display_image("horvath-partners.jpg", width=400)
     
     st.markdown('<div class="main-header">📈 Market Share Analysis</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -578,7 +608,7 @@ def create_category_analysis(df):
     # Add Horvath & Partners logo to top right
     col1, col2 = st.columns([3, 1])
     with col2:
-        st.image("horvath-partners.jpg", width=400)
+        safe_display_image("horvath-partners.jpg", width=400)
     
     st.markdown('<div class="main-header">🏷️ Category Analysis</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -753,7 +783,7 @@ def create_company_deep_dive(df):
     # Add Horvath & Partners logo to top right
     col1, col2 = st.columns([3, 1])
     with col2:
-        st.image("horvath-partners.jpg", width=400)
+        safe_display_image("horvath-partners.jpg", width=400)
     
     st.markdown('<div class="main-header">🔬 Company Deep Dive</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -875,7 +905,7 @@ def create_consulting_competitive_analysis(df):
     # Add Horvath & Partners logo to top right
     col1, col2 = st.columns([3, 1])
     with col2:
-        st.image("horvath-partners.jpg", width=400)
+        safe_display_image("horvath-partners.jpg", width=400)
     
     st.markdown('<div class="main-header">🎯 Consulting Competitive Landscape</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1163,7 +1193,7 @@ def create_consulting_categories(df):
     # Add Horvath & Partners logo to top right
     col1, col2 = st.columns([3, 1])
     with col2:
-        st.image("horvath-partners.jpg", width=400)
+        safe_display_image("horvath-partners.jpg", width=400)
     
     st.markdown('<div class="main-header">📊 Consulting Service Categories</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1219,7 +1249,7 @@ def create_timeline_analysis(df):
     # Add Horvath & Partners logo to top right
     col1, col2 = st.columns([3, 1])
     with col2:
-        st.image("horvath-partners.jpg", width=400)
+        safe_display_image("horvath-partners.jpg", width=400)
     
     st.markdown('<div class="main-header">📅 Market Timeline Analysis</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1332,7 +1362,7 @@ def main():
     # Add Horvath & Partners logo to sidebar - centered
     col1, col2, col3 = st.sidebar.columns([1, 2, 1])
     with col2:
-        st.image("horvath-partners.png", width=200)
+        safe_display_image("horvath-partners.png", width=200)
     st.sidebar.markdown('<h1 style="text-align: center;">📊 Dashboard</h1>', unsafe_allow_html=True)
     st.sidebar.markdown("---")
     
