@@ -145,15 +145,27 @@ def process_dataframe(df):
 @st.cache_data
 def load_data():
     """Load and preprocess the procurement data"""
-    try:
-        df = pd.read_csv('../data/single_subsidiary_data.csv')
-        return process_dataframe(df)
-    except FileNotFoundError:
-        st.error("❌ Data file 'single_subsidiary_data.csv' not found. Please run the single subsidiary scraper first.")
-        return pd.DataFrame()
-    except Exception as e:
-        st.error(f"❌ Error loading data: {str(e)}")
-        return pd.DataFrame()
+    import os
+    
+    # Try different possible paths for the data file
+    possible_paths = [
+        '../data/single_subsidiary_data.csv',  # Local development
+        'single_subsidiary/data/single_subsidiary_data.csv',  # Streamlit Cloud
+        'data/single_subsidiary_data.csv',  # Alternative path
+        os.path.join(os.path.dirname(__file__), '../data/single_subsidiary_data.csv')  # Relative to script
+    ]
+    
+    for path in possible_paths:
+        try:
+            if os.path.exists(path):
+                df = pd.read_csv(path)
+                return process_dataframe(df)
+        except:
+            continue
+    
+    # If no file found, show error
+    st.error("❌ Data file 'single_subsidiary_data.csv' not found. Please run the single subsidiary scraper first or upload your own data using the sidebar.")
+    return pd.DataFrame()
 
 def get_custom_colors(n):
     """Get custom color palette for n items"""
