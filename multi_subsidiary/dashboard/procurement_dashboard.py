@@ -235,8 +235,20 @@ st.markdown(f"""
 def load_all_subsidiary_data():
     """Load and combine all subsidiary CSV files"""
     try:
-        # Look for all final_*.csv files in the data directory
-        csv_files = glob.glob('../data/final_*.csv')
+        # Look for all final_*.csv files in multiple possible data directories
+        possible_data_paths = [
+            '../data/final_*.csv',  # Local development
+            'multi_subsidiary/data/final_*.csv',  # Streamlit Cloud
+            'data/final_*.csv',  # If data folder is in same directory
+            './data/final_*.csv',  # Relative to current directory
+        ]
+
+        csv_files = []
+        for path_pattern in possible_data_paths:
+            found_files = glob.glob(path_pattern)
+            if found_files:
+                csv_files = found_files
+                break
 
         if not csv_files:
             st.error("❌ No subsidiary data files found. Please run the multi-subsidiary scraper first.")
