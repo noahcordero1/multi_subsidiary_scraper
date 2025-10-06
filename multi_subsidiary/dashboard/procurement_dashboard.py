@@ -387,7 +387,7 @@ def create_market_overview(df):
             height=500,
             title_font_color=MCKINSEY_COLORS['primary']
         )
-        st.plotly_chart(fig_companies, width="stretch")
+        st.plotly_chart(fig_companies, use_container_width=True)
     
     with col2:
         # Market share by value with consulting split
@@ -410,7 +410,7 @@ def create_market_overview(df):
             title_font_color=MCKINSEY_COLORS['primary'],
             height=500
         )
-        st.plotly_chart(fig_split, width="stretch")
+        st.plotly_chart(fig_split, use_container_width=True)
     
     # Key consulting insights box
     if not consulting_df.empty:
@@ -465,7 +465,7 @@ def create_company_analysis(df):
             labels={'x': 'Number of Contracts', 'y': 'Company'}
         )
         fig_contracts.update_layout(height=400)
-        st.plotly_chart(fig_contracts, width="stretch")
+        st.plotly_chart(fig_contracts, use_container_width=True)
     
     with col2:
         # Total value by company
@@ -478,7 +478,7 @@ def create_company_analysis(df):
             labels={'x': 'Total Value (€)', 'y': 'Company'}
         )
         fig_value.update_layout(height=400)
-        st.plotly_chart(fig_value, width="stretch")
+        st.plotly_chart(fig_value, use_container_width=True)
     
     # Detailed company table
     st.subheader("📋 Company Performance Summary")
@@ -500,7 +500,7 @@ def create_company_analysis(df):
     company_summary_display['Max Value (€)'] = company_summary_display['Max Value (€)'].apply(lambda x: f"€{x:,.0f}")
     company_summary_display['Avg Competitors'] = company_summary_display['Avg Competitors'].apply(lambda x: f"{x:.1f}")
 
-    st.dataframe(company_summary_display, width="stretch")
+    st.dataframe(company_summary_display, use_container_width=True)
 
 def create_market_share_analysis(df):
     """Create market share analysis with McKinsey colors and consulting highlights"""
@@ -520,7 +520,7 @@ def create_market_share_analysis(df):
             color_discrete_sequence=colors
         )
         fig_pie_count.update_layout(title_font_color=MCKINSEY_COLORS['primary'])
-        st.plotly_chart(fig_pie_count, width="stretch")
+        st.plotly_chart(fig_pie_count, use_container_width=True)
     
     with col2:
         # Market share by value
@@ -534,7 +534,7 @@ def create_market_share_analysis(df):
             color_discrete_sequence=colors
         )
         fig_pie_value.update_layout(title_font_color=MCKINSEY_COLORS['primary'])
-        st.plotly_chart(fig_pie_value, width="stretch")
+        st.plotly_chart(fig_pie_value, use_container_width=True)
     
     # Market concentration metrics
     st.markdown('<div class="section-header">🎯 Market Concentration</div>', unsafe_allow_html=True)
@@ -586,7 +586,7 @@ def create_category_analysis(df):
             showlegend=False,
             title_font_color=MCKINSEY_COLORS['primary']
         )
-        st.plotly_chart(fig_cat, width="stretch")
+        st.plotly_chart(fig_cat, use_container_width=True)
     
     with col2:
         category_values = df.groupby('CPV_Category')['Summe_Clean'].sum().sort_values(ascending=False).head(10)
@@ -604,7 +604,7 @@ def create_category_analysis(df):
             showlegend=False,
             title_font_color=MCKINSEY_COLORS['primary']
         )
-        st.plotly_chart(fig_cat_val, width="stretch")
+        st.plotly_chart(fig_cat_val, use_container_width=True)
     
     # Consulting category analysis
     consulting_df = df[df['Is_Consulting'] == True]
@@ -629,7 +629,7 @@ def create_category_analysis(df):
                 showlegend=False,
                 title_font_color=MCKINSEY_COLORS['primary']
             )
-            st.plotly_chart(fig_consulting_cat, width="stretch")
+            st.plotly_chart(fig_consulting_cat, use_container_width=True)
         
         with col2:
             # Consulting vs non-consulting by top categories
@@ -668,7 +668,7 @@ def create_category_analysis(df):
                 height=400,
                 title_font_color=MCKINSEY_COLORS['primary']
             )
-            st.plotly_chart(fig_comparison, width="stretch")
+            st.plotly_chart(fig_comparison, use_container_width=True)
     
     # Category selection for detailed analysis
     st.markdown('<div class="section-header">🔍 Category Deep Dive</div>', unsafe_allow_html=True)
@@ -713,7 +713,7 @@ def create_category_analysis(df):
         display_df['Contracts'] = display_df['Contracts'].apply(lambda x: f"{x:,}")
         display_df['Total Value'] = display_df['Total Value'].apply(lambda x: f"€{x:,.0f}")
 
-        st.dataframe(display_df, width='stretch')
+        st.dataframe(display_df, use_container_width=True)
         st.caption("🎯 Consulting companies marked with target icon")
 
 
@@ -791,7 +791,7 @@ def create_company_deep_dive(df):
                 title_font_color=MCKINSEY_COLORS['primary']
             )
             
-            st.plotly_chart(fig_performance, width="stretch")
+            st.plotly_chart(fig_performance, use_container_width=True)
     
     with col2:
         # Company's categories
@@ -809,7 +809,7 @@ def create_company_deep_dive(df):
             showlegend=False,
             title_font_color=MCKINSEY_COLORS['primary']
         )
-        st.plotly_chart(fig_cat, width="stretch")
+        st.plotly_chart(fig_cat, use_container_width=True)
     
     # Competition analysis
     st.markdown('<div class="section-header">Competition Analysis</div>', unsafe_allow_html=True)
@@ -838,7 +838,7 @@ def create_company_deep_dive(df):
     # Keep Summe column as-is since it's already formatted from the original data
     recent_contracts_display['Bieter'] = recent_contracts_display['Bieter'].apply(lambda x: f"{x:,}")
 
-    st.dataframe(recent_contracts_display, width="stretch")
+    st.dataframe(recent_contracts_display, use_container_width=True)
 
 def create_consulting_competitive_analysis(df):
     """Create consulting-specific competitive analysis"""
@@ -878,7 +878,7 @@ def create_consulting_competitive_analysis(df):
             height=500,
             title_font_color=MCKINSEY_COLORS['primary']
         )
-        st.plotly_chart(fig_value, width="stretch")
+        st.plotly_chart(fig_value, use_container_width=True)
     
     with col2:
         # Competition intensity analysis for consulting
@@ -895,7 +895,7 @@ def create_consulting_competitive_analysis(df):
             height=500,
             title_font_color=MCKINSEY_COLORS['primary']
         )
-        st.plotly_chart(fig_competition, width="stretch")
+        st.plotly_chart(fig_competition, use_container_width=True)
     
     # Detailed consulting table
     st.subheader("📋 Consulting Firm Performance")
@@ -907,7 +907,7 @@ def create_consulting_competitive_analysis(df):
     consulting_summary_display['Avg Value (€)'] = consulting_summary_display['Avg Value (€)'].apply(lambda x: f"€{x:,.0f}")
     consulting_summary_display['Avg Competition'] = consulting_summary_display['Avg Competition'].apply(lambda x: f"{x:.1f}")
 
-    st.dataframe(consulting_summary_display, width="stretch")
+    st.dataframe(consulting_summary_display, use_container_width=True)
 
 def create_consulting_categories(df):
     """Create consulting category analysis"""
@@ -938,7 +938,7 @@ def create_consulting_categories(df):
             height=500,
             title_font_color=MCKINSEY_COLORS['primary']
         )
-        st.plotly_chart(fig_cat, width="stretch")
+        st.plotly_chart(fig_cat, use_container_width=True)
     
     with col2:
         # Category value analysis
@@ -957,7 +957,7 @@ def create_consulting_categories(df):
             height=500,
             title_font_color=MCKINSEY_COLORS['primary']
         )
-        st.plotly_chart(fig_cat_val, width="stretch")
+        st.plotly_chart(fig_cat_val, use_container_width=True)
 
 def create_timeline_analysis(df):
     """Create timeline analysis with consulting overlay"""
@@ -1028,7 +1028,7 @@ def create_timeline_analysis(df):
             title_font_color=MCKINSEY_COLORS['primary'],
             height=400
         )
-        st.plotly_chart(fig_contracts, width="stretch")
+        st.plotly_chart(fig_contracts, use_container_width=True)
     
     with col2:
         # Value trends
@@ -1050,7 +1050,7 @@ def create_timeline_analysis(df):
             title_font_color=MCKINSEY_COLORS['primary'],
             height=400
         )
-        st.plotly_chart(fig_values, width="stretch")
+        st.plotly_chart(fig_values, use_container_width=True)
 
 def create_disclaimer_page():
     """Create disclaimer and information page"""
@@ -1097,7 +1097,7 @@ def create_disclaimer_page():
         })
 
     subsidiary_df = pd.DataFrame(subsidiary_data)
-    st.dataframe(subsidiary_df, width="stretch", hide_index=True)
+    st.dataframe(subsidiary_df, use_container_width=True, hide_index=True)
 
     # Consulting Companies Section
     st.markdown('<div class="section-header">🎯 Consulting Companies Tracked</div>', unsafe_allow_html=True)
