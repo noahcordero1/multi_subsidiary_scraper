@@ -20,9 +20,122 @@ import re
 from collections import Counter
 import glob
 import os
-import sys
-sys.path.append('../scraper')
-from final_multi_subsidiary_scraper import MultiSubsidiaryScraperConfig
+# Local configuration to avoid import issues in Streamlit Cloud
+class MultiSubsidiaryScraperConfig:
+    """Configuration class for multi-subsidiary scraper - local copy for dashboard"""
+
+    SUBSIDIARIES = {
+        "obb_business": {
+            "name": "ÖBB-Business Competence Center",
+            "id": "8550",
+            "url": "https://offenevergaben.at/auftraggeber/8550"
+        },
+        "obb_infrastruktur": {
+            "name": "ÖBB-Infrastruktur AG",
+            "id": "8538",
+            "url": "https://offenevergaben.at/auftraggeber/8538"
+        },
+        "obb_technische_services": {
+            "name": "ÖBB-Technische Services Gesellschaft",
+            "id": "11068",
+            "url": "https://offenevergaben.at/auftraggeber/11068"
+        },
+        "obb_holding_all": {
+            "name": "ÖBB Holding AG mit allen verbundenen Unternehmen",
+            "id": "11074",
+            "url": "https://offenevergaben.at/auftraggeber/11074"
+        },
+        "obb_personenverkehr": {
+            "name": "ÖBB-Personenverkehr AG",
+            "id": "8547",
+            "url": "https://offenevergaben.at/auftraggeber/8547"
+        },
+        "obb_produktion": {
+            "name": "ÖBB-Produktion",
+            "id": "8545",
+            "url": "https://offenevergaben.at/auftraggeber/8545"
+        },
+        "obb_postbus": {
+            "name": "ÖBB-Postbus",
+            "id": "8581",
+            "url": "https://offenevergaben.at/auftraggeber/8581"
+        },
+        "obb_holding": {
+            "name": "ÖBB-Holding AG",
+            "id": "11217",
+            "url": "https://offenevergaben.at/auftraggeber/11217"
+        },
+        "obb_immobilienmanagement": {
+            "name": "ÖBB-Immobilienmanagement",
+            "id": "11090",
+            "url": "https://offenevergaben.at/auftraggeber/11090"
+        },
+        "obb_werbung": {
+            "name": "ÖBB-Werbung",
+            "id": "11224",
+            "url": "https://offenevergaben.at/auftraggeber/11224"
+        },
+        "obb_rail_tours": {
+            "name": "ÖBB Rail Tours Austria",
+            "id": "11446",
+            "url": "https://offenevergaben.at/auftraggeber/11446"
+        },
+        "obb_infrastruktur_ag": {
+            "name": "ÖBB-Infrastruktur Aktiengesellschaft",
+            "id": "28842",
+            "url": "https://offenevergaben.at/auftraggeber/28842"
+        },
+        "obb_infrastruktur_gb_projekt": {
+            "name": "ÖBB-Infrastruktur AG GB Projekt",
+            "id": "24814",
+            "url": "https://offenevergaben.at/auftraggeber/24814"
+        },
+        "obb_infrastruktur_2": {
+            "name": "ÖBB Infrastruktur AG (2)",
+            "id": "36280",
+            "url": "https://offenevergaben.at/auftraggeber/36280"
+        },
+        "obb_personenverkehr_2": {
+            "name": "ÖBB Personenverkehr AG (2)",
+            "id": "19826",
+            "url": "https://offenevergaben.at/auftraggeber/19826"
+        },
+        "obb_immobilienmanagement_2": {
+            "name": "ÖBB-Immobilienmanagement (2)",
+            "id": "33422",
+            "url": "https://offenevergaben.at/auftraggeber/33422"
+        },
+        "obb_technische_services_2": {
+            "name": "ÖBB-Technische Services-Gesellschaft (2)",
+            "id": "37657",
+            "url": "https://offenevergaben.at/auftraggeber/37657"
+        },
+        "obb_personenverkehr_3": {
+            "name": "ÖBB-Personenverkehr AG (3)",
+            "id": "24566",
+            "url": "https://offenevergaben.at/auftraggeber/24566"
+        },
+        "obb_personenverkehr_4": {
+            "name": "ÖBB Personenverkehr AG (4)",
+            "id": "29519",
+            "url": "https://offenevergaben.at/auftraggeber/29519"
+        },
+        "obb_personenverkehr_5": {
+            "name": "ÖBB Personenverkehr AG (5)",
+            "id": "28047",
+            "url": "https://offenevergaben.at/auftraggeber/28047"
+        },
+        "obb_business_2": {
+            "name": "ÖBB-Business Competence Center (2)",
+            "id": "37203",
+            "url": "https://offenevergaben.at/auftraggeber/37203"
+        },
+        "obb_business_3": {
+            "name": "ÖBB-Business Competence Center (3)",
+            "id": "37202",
+            "url": "https://offenevergaben.at/auftraggeber/37202"
+        }
+    }
 
 # McKinsey Color Palette
 MCKINSEY_COLORS = {
