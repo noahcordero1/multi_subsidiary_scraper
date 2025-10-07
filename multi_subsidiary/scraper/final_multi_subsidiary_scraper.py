@@ -266,7 +266,7 @@ class FinalMultiSubsidiaryScraper:
         headers_written = False
 
         while True:
-            page_url = f"{subsidiary_info['url']}?page={page}"
+            page_url = f"{subsidiary_info['url']}?page={page}&sort=item_lastmod"
             logger.info(f"Scraping page {page} for {subsidiary_info['name']}")
 
             # Validate page content
@@ -344,7 +344,7 @@ def test_single_subsidiary(start_page=105):
         found_empty = False
 
         while not found_empty and page < start_page + 20:  # Test max 20 pages
-            page_url = f"{subsidiary_info['url']}?page={page}"
+            page_url = f"{subsidiary_info['url']}?page={page}&sort=item_lastmod"
             print(f"📄 Testing page {page}")
 
             has_content, row_count = scraper.validate_page_content(page_url)
