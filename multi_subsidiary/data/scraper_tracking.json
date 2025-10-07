@@ -1,13 +1,118 @@
 {
   "tracking_info": {
-    "last_update": "2025-10-07T10:54:01.786904",
+    "last_update": "2025-10-07T20:10:34.202188",
     "scraper_version": "trial_v1.0"
   },
   "subsidiaries": {
+    "obb_business": {
+      "last_scraped_page": 110,
+      "last_scrape_date": "2025-10-07T19:22:54.819548",
+      "total_new_records_this_run": 0
+    },
+    "obb_infrastruktur": {
+      "last_scraped_page": 1041,
+      "last_scrape_date": "2025-10-07T19:51:49.601871",
+      "total_new_records_this_run": 7047
+    },
+    "obb_technische_services": {
+      "last_scraped_page": 211,
+      "last_scrape_date": "2025-10-07T20:00:32.260863",
+      "total_new_records_this_run": 4214
+    },
+    "obb_holding_all": {
+      "last_scraped_page": 63,
+      "last_scrape_date": "2025-10-07T20:03:03.439088",
+      "total_new_records_this_run": 1249
+    },
+    "obb_personenverkehr": {
+      "last_scraped_page": 49,
+      "last_scrape_date": "2025-10-07T20:05:04.028025",
+      "total_new_records_this_run": 970
+    },
     "obb_produktion": {
       "last_scraped_page": 42,
-      "last_scrape_date": "2025-10-07T10:54:01.786894",
-      "total_new_records_this_run": 0
+      "last_scrape_date": "2025-10-07T20:06:51.555376",
+      "total_new_records_this_run": 830
+    },
+    "obb_postbus": {
+      "last_scraped_page": 35,
+      "last_scrape_date": "2025-10-07T20:08:24.337852",
+      "total_new_records_this_run": 682
+    },
+    "obb_holding": {
+      "last_scraped_page": 14,
+      "last_scrape_date": "2025-10-07T20:09:05.538100",
+      "total_new_records_this_run": 277
+    },
+    "obb_immobilienmanagement": {
+      "last_scraped_page": 9,
+      "last_scrape_date": "2025-10-07T20:09:28.965389",
+      "total_new_records_this_run": 180
+    },
+    "obb_werbung": {
+      "last_scraped_page": 6,
+      "last_scrape_date": "2025-10-07T20:09:44.524524",
+      "total_new_records_this_run": 120
+    },
+    "obb_rail_tours": {
+      "last_scraped_page": 2,
+      "last_scrape_date": "2025-10-07T20:09:51.400589",
+      "total_new_records_this_run": 27
+    },
+    "obb_infrastruktur_ag": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:09:54.993620",
+      "total_new_records_this_run": 19
+    },
+    "obb_infrastruktur_gb_projekt": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:09:58.897485",
+      "total_new_records_this_run": 7
+    },
+    "obb_infrastruktur_2": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:10:02.967443",
+      "total_new_records_this_run": 8
+    },
+    "obb_personenverkehr_2": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:10:08.484846",
+      "total_new_records_this_run": 4
+    },
+    "obb_immobilienmanagement_2": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:10:12.705253",
+      "total_new_records_this_run": 1
+    },
+    "obb_technische_services_2": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:10:16.116837",
+      "total_new_records_this_run": 5
+    },
+    "obb_personenverkehr_3": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:10:19.545819",
+      "total_new_records_this_run": 2
+    },
+    "obb_personenverkehr_4": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:10:22.943717",
+      "total_new_records_this_run": 2
+    },
+    "obb_personenverkehr_5": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:10:26.445287",
+      "total_new_records_this_run": 2
+    },
+    "obb_business_2": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:10:30.846424",
+      "total_new_records_this_run": 1
+    },
+    "obb_business_3": {
+      "last_scraped_page": 1,
+      "last_scrape_date": "2025-10-07T20:10:34.202178",
+      "total_new_records_this_run": 1
     }
   }
 }
