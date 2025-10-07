@@ -235,12 +235,12 @@ st.markdown(f"""
 def load_all_subsidiary_data():
     """Load and combine all subsidiary CSV files"""
     try:
-        # Look for all final_*.csv files in multiple possible data directories
+        # Look for all *_data.csv files from the incremental scraper
         possible_data_paths = [
-            '../data/final_*.csv',  # Local development
-            'multi_subsidiary/data/final_*.csv',  # Streamlit Cloud
-            'data/final_*.csv',  # If data folder is in same directory
-            './data/final_*.csv',  # Relative to current directory
+            '../data/*_data.csv',  # Local development
+            'multi_subsidiary/data/*_data.csv',  # Streamlit Cloud
+            'data/*_data.csv',  # If data folder is in same directory
+            './data/*_data.csv',  # Relative to current directory
         ]
 
         csv_files = []
@@ -259,6 +259,10 @@ def load_all_subsidiary_data():
         for file in csv_files:
             try:
                 df_temp = pd.read_csv(file)
+                # Ensure we have the expected columns
+                if 'subsidiary_name' not in df_temp.columns or 'subsidiary_id' not in df_temp.columns:
+                    st.warning(f"⚠️ Skipping {file}: Missing subsidiary columns")
+                    continue
                 dataframes.append(df_temp)
             except Exception as e:
                 st.warning(f"⚠️ Could not load {file}: {str(e)}")
@@ -504,6 +508,11 @@ def create_company_analysis(df):
 
 def create_market_share_analysis(df):
     """Create market share analysis with McKinsey colors and consulting highlights"""
+    # Add logo to top right
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        safe_display_image("horvath-partners.jpg", width=400)
+
     st.markdown('<div class="section-header">📈 Market Share Analysis</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -565,6 +574,11 @@ def create_market_share_analysis(df):
 
 def create_category_analysis(df):
     """Create category analysis with consulting insights"""
+    # Add logo to top right
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        safe_display_image("horvath-partners.jpg", width=400)
+
     st.markdown('<div class="section-header">🏷️ Category Analysis</div>', unsafe_allow_html=True)
     
     # Top categories with McKinsey colors
@@ -720,6 +734,11 @@ def create_category_analysis(df):
 
 def create_company_deep_dive(df):
     """Create detailed company analysis with McKinsey styling"""
+    # Add logo to top right
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        safe_display_image("horvath-partners.jpg", width=400)
+
     st.markdown('<div class="section-header">🔬 Company Deep Dive</div>', unsafe_allow_html=True)
     
     # Company selector
@@ -842,6 +861,11 @@ def create_company_deep_dive(df):
 
 def create_consulting_competitive_analysis(df):
     """Create consulting-specific competitive analysis"""
+    # Add logo to top right
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        safe_display_image("horvath-partners.jpg", width=400)
+
     st.markdown('<div class="section-header">🎯 Consulting Competitive Landscape</div>', unsafe_allow_html=True)
     
     consulting_df = df[df['Is_Consulting'] == True]
@@ -961,6 +985,11 @@ def create_consulting_categories(df):
 
 def create_timeline_analysis(df):
     """Create timeline analysis with consulting overlay"""
+    # Add logo to top right
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        safe_display_image("horvath-partners.jpg", width=400)
+
     st.markdown('<div class="section-header">📅 Market Timeline Analysis</div>', unsafe_allow_html=True)
     
     # Filter out invalid dates
