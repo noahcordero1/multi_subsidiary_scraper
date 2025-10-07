@@ -237,10 +237,11 @@ def load_all_subsidiary_data():
     try:
         # Look for all *_data.csv files from the incremental scraper
         possible_data_paths = [
-            '../data/*_data.csv',  # Local development
-            'multi_subsidiary/data/*_data.csv',  # Streamlit Cloud
-            'data/*_data.csv',  # If data folder is in same directory
+            '../data/*_data.csv',  # Local development (from dashboard folder)
+            'data/*_data.csv',  # Streamlit Cloud (root level)
+            'multi_subsidiary/data/*_data.csv',  # Streamlit Cloud alternative
             './data/*_data.csv',  # Relative to current directory
+            os.path.join(os.path.dirname(__file__), '..', 'data', '*_data.csv'),  # Relative to script location
         ]
 
         csv_files = []
@@ -251,7 +252,17 @@ def load_all_subsidiary_data():
                 break
 
         if not csv_files:
+            # Show debugging information
             st.error("❌ No subsidiary data files found. Please run the multi-subsidiary scraper first.")
+            with st.expander("🔍 Debug Information"):
+                st.write("**Current working directory:**", os.getcwd())
+                st.write("**Script location:**", os.path.dirname(__file__))
+                st.write("**Searched paths:**")
+                for i, path in enumerate(possible_data_paths, 1):
+                    files_found = glob.glob(path)
+                    st.write(f"{i}. `{path}` → Found: {len(files_found)} files")
+                    if files_found:
+                        st.write("   Files:", files_found[:5])  # Show first 5 files
             return pd.DataFrame()
 
         # Load and combine all CSV files
