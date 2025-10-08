@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ÖBB Multi-Subsidiary Procurement Intelligence Dashboard
+Ausschreibungs-Dashboard
 A specialized Streamlit dashboard for analyzing consulting competitors across multiple ÖBB subsidiaries
 
 Requirements:
@@ -193,7 +193,7 @@ def safe_display_image(image_path, **kwargs):
 
 # Page configuration
 st.set_page_config(
-    page_title="ÖBB Multi-Subsidiary Procurement Intelligence",
+    page_title="Ausschreibungs-Dashboard",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -1106,7 +1106,7 @@ def create_disclaimer_page():
     st.markdown('<div class="section-header">📊 About This Dashboard</div>', unsafe_allow_html=True)
 
     st.markdown("""
-    **ÖBB Multi-Subsidiary Procurement Intelligence Dashboard** is a comprehensive analytics platform designed to provide insights into procurement activities across all Austrian Federal Railways (ÖBB) subsidiaries.
+    **Ausschreibungs-Dashboard** is a comprehensive analytics platform designed to provide insights into procurement activities across all Austrian Federal Railways (ÖBB) subsidiaries.
 
     ### Key Features:
     - **Multi-Subsidiary Analysis**: Data from 22 ÖBB subsidiaries and related entities
@@ -1234,7 +1234,7 @@ def main():
     with col2:
         safe_display_image("horvath-partners.png", width=200)
 
-    st.sidebar.title("📊 Multi-Subsidiary Intelligence")
+    st.sidebar.title("📊 Ausschreibungs-Dashboard")
 
     # Navigation - Add disclaimer page
     page = st.sidebar.selectbox(
@@ -1260,18 +1260,20 @@ def main():
 
     available_subsidiaries = get_available_subsidiaries(df_all)
 
+    # Initialize session state for subsidiary selection
+    if 'selected_subsidiaries' not in st.session_state:
+        st.session_state.selected_subsidiaries = available_subsidiaries.copy()  # Start with all selected
+
     # Select All / Deselect All buttons
     col1, col2 = st.sidebar.columns(2)
     with col1:
         if st.button("✅ Select All", key="select_all"):
             st.session_state.selected_subsidiaries = available_subsidiaries.copy()
+            st.rerun()  # Force refresh to update multiselect
     with col2:
         if st.button("❌ Clear All", key="clear_all"):
             st.session_state.selected_subsidiaries = []
-
-    # Initialize session state for subsidiary selection
-    if 'selected_subsidiaries' not in st.session_state:
-        st.session_state.selected_subsidiaries = available_subsidiaries.copy()  # Start with all selected
+            st.rerun()  # Force refresh to update multiselect
 
     # Multi-select for subsidiaries
     selected_subsidiaries = st.sidebar.multiselect(
@@ -1282,8 +1284,9 @@ def main():
         help="Select specific ÖBB subsidiaries for analysis"
     )
 
-    # Update session state
-    st.session_state.selected_subsidiaries = selected_subsidiaries
+    # Update session state when multiselect changes
+    if selected_subsidiaries != st.session_state.selected_subsidiaries:
+        st.session_state.selected_subsidiaries = selected_subsidiaries
 
     # Filter data by selected subsidiaries
     if not selected_subsidiaries:
@@ -1305,17 +1308,57 @@ def main():
         index=0
     )
 
-    # Value range filter
+    # Contract value filtering with ranges
+    st.sidebar.subheader("💰 Contract Value Filter")
+
     if not df.empty and df['Summe_Clean'].notna().any():
         max_val = int(df['Summe_Clean'].max()) if df['Summe_Clean'].max() > 0 else 1000000
-        min_value, max_value = st.sidebar.slider(
-            "Contract Value Range (€)",
-            min_value=0,
-            max_value=max_val,
-            value=(0, max_val),
-            step=1000,
-            format="€%d"
+
+        # Define contract size categories
+        contract_ranges = {
+            "Small (€0 - €50K)": (0, 50000),
+            "Medium (€50K - €500K)": (50000, 500000),
+            "Large (€500K - €5M)": (500000, 5000000),
+            "Very Large (€5M+)": (5000000, max_val),
+            "Custom Range": None
+        }
+
+        # Contract size selector
+        size_category = st.sidebar.selectbox(
+            "Contract Size Category:",
+            list(contract_ranges.keys()),
+            index=4  # Default to Custom Range
         )
+
+        if size_category == "Custom Range":
+            # Custom slider with thousand separators
+            min_value, max_value = st.sidebar.slider(
+                "Custom Value Range:",
+                min_value=0,
+                max_value=max_val,
+                value=(0, max_val),
+                step=1000,
+                format="€%d"
+            )
+            # Display formatted values
+            st.sidebar.write(f"Selected: €{min_value:,} - €{max_value:,}")
+        else:
+            # Use predefined range
+            min_value, max_value = contract_ranges[size_category]
+            st.sidebar.write(f"Range: €{min_value:,} - €{max_value:,}")
+
+            # Optional fine-tuning slider within the category
+            if size_category != "Very Large (€5M+)":
+                range_min, range_max = contract_ranges[size_category]
+                min_value, max_value = st.sidebar.slider(
+                    f"Fine-tune {size_category}:",
+                    min_value=range_min,
+                    max_value=range_max,
+                    value=(range_min, range_max),
+                    step=1000 if range_max <= 100000 else 10000,
+                    format="€%d"
+                )
+                st.sidebar.write(f"Fine-tuned: €{min_value:,} - €{max_value:,}")
     else:
         min_value, max_value = 0, 1000000
 
@@ -1332,7 +1375,7 @@ def main():
 
     # Display selected page
     if page == "Market Overview":
-        create_market_overview(df)  # Use subsidiary-filtered data
+        create_market_overview(df_filtered)  # Use all filtered data (subsidiaries + consulting)
     elif page == "Market Share Analysis":
         create_market_share_analysis(df_filtered)
     elif page == "Competitive Intelligence":
