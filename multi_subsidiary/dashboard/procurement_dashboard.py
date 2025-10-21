@@ -231,6 +231,50 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
+# Subsidiary grouping mapping - Maps subsidiary IDs to their canonical group name
+# Only groups subsidiaries that are truly identical except for variant numbers
+SUBSIDIARY_GROUPS = {
+    # ÖBB-Business Competence Center (3 variants)
+    "8550": "ÖBB-Business Competence Center",
+    "37203": "ÖBB-Business Competence Center",
+    "37202": "ÖBB-Business Competence Center",
+
+    # ÖBB-Infrastruktur AG (4 variants - includes Aktiengesellschaft which is the same)
+    "8538": "ÖBB-Infrastruktur AG",
+    "36280": "ÖBB-Infrastruktur AG",
+    "28842": "ÖBB-Infrastruktur AG",
+    "24814": "ÖBB-Infrastruktur AG GB Projekt",  # Keep GB Projekt separate as it's different
+
+    # ÖBB-Personenverkehr AG (5 variants)
+    "8547": "ÖBB-Personenverkehr AG",
+    "19826": "ÖBB-Personenverkehr AG",
+    "24566": "ÖBB-Personenverkehr AG",
+    "29519": "ÖBB-Personenverkehr AG",
+    "28047": "ÖBB-Personenverkehr AG",
+
+    # ÖBB-Technische Services Gesellschaft (2 variants)
+    "11068": "ÖBB-Technische Services Gesellschaft",
+    "37657": "ÖBB-Technische Services Gesellschaft",
+
+    # ÖBB-Immobilienmanagement (2 variants)
+    "11090": "ÖBB-Immobilienmanagement",
+    "33422": "ÖBB-Immobilienmanagement",
+
+    # ÖBB Holding AG - Keep separate as one includes "mit allen verbundenen Unternehmen"
+    "11217": "ÖBB-Holding AG",
+    "11074": "ÖBB Holding AG mit allen verbundenen Unternehmen",  # Different entity
+
+    # Single entities (no variants)
+    "8581": "ÖBB-Postbus",
+    "8545": "ÖBB-Produktion",
+    "11446": "ÖBB Rail Tours Austria",
+    "11224": "ÖBB-Werbung",
+}
+
+def get_subsidiary_group(subsidiary_id):
+    """Get the canonical group name for a subsidiary based on its ID"""
+    return SUBSIDIARY_GROUPS.get(str(subsidiary_id), None)
+
 @st.cache_data
 def load_all_subsidiary_data():
     """Load and combine all subsidiary CSV files"""
@@ -285,6 +329,12 @@ def load_all_subsidiary_data():
         # Combine all dataframes
         df = pd.concat(dataframes, ignore_index=True)
 
+        # Group subsidiaries based on ID mapping
+        df['subsidiary_group'] = df['subsidiary_id'].astype(str).apply(get_subsidiary_group)
+
+        # Fallback to original name if no mapping exists (shouldn't happen with complete mapping)
+        df['subsidiary_group'] = df['subsidiary_group'].fillna(df['subsidiary_name'])
+
         # Clean and preprocess data
         df['Aktualisiert'] = pd.to_datetime(df['Aktualisiert'], format='%d.%m.%Y', errors='coerce')
 
@@ -322,10 +372,10 @@ def load_all_subsidiary_data():
         return pd.DataFrame()
 
 def get_available_subsidiaries(df):
-    """Get list of available subsidiaries from the data"""
+    """Get list of available subsidiaries from the data (grouped by canonical names)"""
     if df.empty:
         return []
-    return sorted(df['subsidiary_name'].unique())
+    return sorted(df['subsidiary_group'].unique())
 
 def get_mckinsey_colors(n):
     """Get McKinsey color palette for n items"""
@@ -337,8 +387,8 @@ def get_mckinsey_colors(n):
     ]
     return colors[:n] if n <= len(colors) else colors * (n // len(colors) + 1)
 
-def create_market_overview(df):
-    """Create balanced market overview with consulting insights"""
+def create_market_overview(df, company_filter="All Companies"):
+    """Create balanced market overview with consulting insights and year filtering"""
     if df.empty:
         return
 
@@ -347,9 +397,50 @@ def create_market_overview(df):
     with col2:
         safe_display_image("horvath-partners.jpg", width=400)
 
-    st.markdown('<div class="main-header">📊 ÖBB Multi-Subsidiary Market Intelligence</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">📊 Ausschreibungs-Dashboard</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    
+
+    # Year filtering section
+    st.markdown('<div class="section-header">📅 Time Period Filter</div>', unsafe_allow_html=True)
+
+    # Filter out invalid dates and extract years
+    df_with_dates = df[df['Aktualisiert'].notna()].copy()
+
+    if not df_with_dates.empty:
+        df_with_dates['Year'] = df_with_dates['Aktualisiert'].dt.year
+        available_years = sorted(df_with_dates['Year'].unique())
+
+        col1, col2 = st.columns(2)
+        with col1:
+            start_year = st.selectbox(
+                "From Year:",
+                available_years,
+                index=0,
+                key="start_year_overview"
+            )
+
+        with col2:
+            end_year = st.selectbox(
+                "To Year:",
+                available_years,
+                index=len(available_years)-1,
+                key="end_year_overview"
+            )
+
+        # Apply year filter
+        df = df_with_dates[(df_with_dates['Year'] >= start_year) & (df_with_dates['Year'] <= end_year)].copy()
+
+        # Show selected period info
+        st.info(f"📊 Showing data from **{start_year}** to **{end_year}** ({len(df):,} contracts)")
+    else:
+        st.warning("⚠️ No valid date information available for time filtering")
+
+    if df.empty:
+        st.warning("No data available for the selected time period")
+        return
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
     # Overall market metrics
     consulting_df = df[df['Is_Consulting'] == True]
     
@@ -380,55 +471,135 @@ def create_market_overview(df):
     
     with col1:
         # Top companies overall with consulting highlighted
+        import plotly.graph_objects as go
+
         top_companies = df['Lieferant_Clean'].value_counts().head(15)
-        
+
+        # Truncate long company names
+        def truncate_name(name, max_length=40):
+            return name[:max_length] + '...' if len(name) > max_length else name
+
+        truncated_names = [truncate_name(name) for name in top_companies.index]
+
         # Create color map - consulting companies get McKinsey accent colors, others get gray
         colors = []
         for company in top_companies.index:
             if df[df['Lieferant_Clean'] == company]['Is_Consulting'].iloc[0]:
-                colors.append(MCKINSEY_COLORS['accent4'])  # Consulting companies in red-pink
+                colors.append(MCKINSEY_COLORS['accent4'])
             else:
-                colors.append(MCKINSEY_COLORS['light_gray'])  # Non-consulting in gray
-        
-        fig_companies = px.bar(
+                colors.append(MCKINSEY_COLORS['light_gray'])
+
+        fig_companies = go.Figure(go.Bar(
             x=top_companies.values,
-            y=top_companies.index,
+            y=truncated_names,
             orientation='h',
-            title="Top 15 Companies by Contract Count (Consulting Highlighted)",
-            color_discrete_sequence=colors
-        )
+            marker=dict(color=colors, line=dict(width=0)),
+            text=top_companies.values,
+            textposition='outside',
+            hovertemplate='<b>%{customdata}</b><br>Contracts: %{x}<br><extra></extra>',
+            customdata=top_companies.index  # Full names in hover
+        ))
+
         fig_companies.update_layout(
+            title="Top 15 Companies by Contract Count",
+            title_font_color=MCKINSEY_COLORS['primary'],
             showlegend=False,
             height=500,
-            title_font_color=MCKINSEY_COLORS['primary']
+            xaxis_title="Number of Contracts",
+            yaxis_title="",
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+            yaxis=dict(showgrid=False),
+            margin=dict(l=0, r=50, t=40, b=40)
         )
         st.plotly_chart(fig_companies, use_container_width=True)
     
     with col2:
-        # Market share by value with consulting split
+        # Show different visualizations based on filter
+        if company_filter == "All Companies":
+            # Pie chart for consulting split (only when viewing all companies)
+            consulting_value = consulting_df['Summe_Clean'].sum()
+            non_consulting_value = total_value - consulting_value
+
+            split_data = pd.DataFrame({
+                'Type': ['Consulting', 'Non-Consulting'],
+                'Value': [consulting_value, non_consulting_value]
+            })
+
+            fig_split = px.pie(
+                split_data,
+                values='Value',
+                names='Type',
+                title="Market Value: Consulting vs Non-Consulting",
+                color_discrete_sequence=[MCKINSEY_COLORS['accent4'], MCKINSEY_COLORS['light_blue']]
+            )
+            fig_split.update_layout(
+                title_font_color=MCKINSEY_COLORS['primary'],
+                height=500
+            )
+            st.plotly_chart(fig_split, use_container_width=True)
+
+        else:
+            # For filtered views, show average contract value (more meaningful metric)
+            avg_contract_value = df.groupby('Lieferant_Clean').agg({
+                'Summe_Clean': ['mean', 'count']
+            }).round(0)
+            avg_contract_value.columns = ['Avg_Value', 'Count']
+            # Only include companies with at least 3 contracts for meaningful average
+            avg_contract_value = avg_contract_value[avg_contract_value['Count'] >= 3]
+            avg_contract_value = avg_contract_value.sort_values('Avg_Value', ascending=False).head(15)
+
+            # Truncate company names
+            def truncate_name(name, max_length=40):
+                return name[:max_length] + '...' if len(name) > max_length else name
+
+            truncated_names = [truncate_name(name) for name in avg_contract_value.index]
+            full_names = list(avg_contract_value.index)
+
+            title = f"Top 15 Companies by Avg Contract Value"
+
+            fig_value = go.Figure(go.Bar(
+                x=avg_contract_value['Avg_Value'].values,
+                y=truncated_names,
+                orientation='h',
+                marker=dict(
+                    color=avg_contract_value['Avg_Value'].values,
+                    colorscale=[[0, MCKINSEY_COLORS['light_blue']],
+                               [0.5, MCKINSEY_COLORS['secondary']],
+                               [1, MCKINSEY_COLORS['accent4']]],
+                    showscale=False,
+                    line=dict(width=0)
+                ),
+                text=[f"€{val:,.0f}" for val in avg_contract_value['Avg_Value'].values],
+                textposition='outside',
+                hovertemplate='<b>%{customdata}</b><br>Avg Value: €%{x:,.0f}<br><extra></extra>',
+                customdata=full_names  # Full names in hover
+            ))
+
+            fig_value.update_layout(
+                title=title,
+                title_font_color=MCKINSEY_COLORS['primary'],
+                showlegend=False,
+                height=500,
+                xaxis_title="Average Contract Value (€)",
+                yaxis_title="",
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(
+                    showgrid=True,
+                    gridcolor='rgba(128,128,128,0.2)',
+                    tickformat='€,.0f'
+                ),
+                yaxis=dict(showgrid=False),
+                margin=dict(l=0, r=80, t=40, b=40)
+            )
+            st.plotly_chart(fig_value, use_container_width=True)
+
+    # Key consulting insights box (only show when viewing "All Companies")
+    if not consulting_df.empty and company_filter == "All Companies":
+        # Calculate consulting values for metrics
         consulting_value = consulting_df['Summe_Clean'].sum()
-        non_consulting_value = total_value - consulting_value
-        
-        split_data = pd.DataFrame({
-            'Type': ['Consulting', 'Non-Consulting'],
-            'Value': [consulting_value, non_consulting_value]
-        })
-        
-        fig_split = px.pie(
-            split_data, 
-            values='Value', 
-            names='Type',
-            title="Market Value: Consulting vs Non-Consulting",
-            color_discrete_sequence=[MCKINSEY_COLORS['accent4'], MCKINSEY_COLORS['light_blue']]
-        )
-        fig_split.update_layout(
-            title_font_color=MCKINSEY_COLORS['primary'],
-            height=500
-        )
-        st.plotly_chart(fig_split, use_container_width=True)
-    
-    # Key consulting insights box
-    if not consulting_df.empty:
         st.markdown('<div class="section-header">🎯 Consulting Market Insights</div>', unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
         
@@ -1106,38 +1277,43 @@ def create_disclaimer_page():
     st.markdown('<div class="section-header">📊 About This Dashboard</div>', unsafe_allow_html=True)
 
     st.markdown("""
-    **Ausschreibungs-Dashboard** is a comprehensive analytics platform designed to provide insights into procurement activities across all Austrian Federal Railways (ÖBB) subsidiaries.
+    **Ausschreibungs-Dashboard** analyzes ÖBB procurement data from **OffeneVergaben.at**, Austria's official public procurement platform.
 
     ### Key Features:
-    - **Multi-Subsidiary Analysis**: Data from 22 ÖBB subsidiaries and related entities
-    - **Consulting Intelligence**: Specialized tracking and analysis of consulting firm activities
+    - **Multi-Subsidiary Analysis**: Data from 22 ÖBB entities (grouped into 13 consolidated subsidiaries)
+    - **Consulting Intelligence**: Automatic tracking of 37+ consulting firms
     - **Market Intelligence**: Contract values, competition analysis, and market share insights
-    - **Category Analysis**: Procurement categorization using CPV (Common Procurement Vocabulary) codes
-    - **Timeline Analysis**: Temporal trends and patterns in procurement activities
-    - **Company Deep Dive**: Detailed performance analysis for individual suppliers
-
-    ### Data Source:
-    All data is sourced from **OffeneVergaben.at**, Austria's official public procurement transparency platform, ensuring accuracy and compliance with public procurement transparency requirements.
+    - **Year Filtering**: Temporal analysis by custom time periods
+    - **Company Deep Dive**: Detailed supplier performance metrics
     """)
 
     # Subsidiary Information
-    st.markdown('<div class="section-header">🏢 ÖBB Subsidiaries Covered</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">🏢 ÖBB Subsidiaries & Grouping</div>', unsafe_allow_html=True)
 
     st.markdown("""
-    This dashboard analyzes procurement data from the following 22 ÖBB entities:
+    The dashboard analyzes **22 individual ÖBB entities** consolidated into **13 logical groups** for analysis:
     """)
 
-    # Create a formatted list of subsidiaries from the scraper config
-    config = MultiSubsidiaryScraperConfig()
-    subsidiary_data = []
-    for key, info in config.SUBSIDIARIES.items():
-        subsidiary_data.append({
-            'Entity': info['name'],
-            'Entity ID': info['id']
-        })
+    # Show grouped subsidiaries
+    col1, col2 = st.columns(2)
 
-    subsidiary_df = pd.DataFrame(subsidiary_data)
-    st.dataframe(subsidiary_df, use_container_width=True, hide_index=True)
+    with col1:
+        st.markdown("**Consolidated Groups:**")
+        st.markdown("• ÖBB-Business Competence Center *(3 entities)*")
+        st.markdown("• ÖBB-Infrastruktur AG *(3 entities)*")
+        st.markdown("• ÖBB-Personenverkehr AG *(5 entities)*")
+        st.markdown("• ÖBB-Technische Services Gesellschaft *(2 entities)*")
+        st.markdown("• ÖBB-Immobilienmanagement *(2 entities)*")
+
+    with col2:
+        st.markdown("**Individual Entities:**")
+        st.markdown("• ÖBB-Infrastruktur AG GB Projekt")
+        st.markdown("• ÖBB Holding AG mit allen verbundenen Unternehmen")
+        st.markdown("• ÖBB-Holding AG")
+        st.markdown("• ÖBB-Postbus")
+        st.markdown("• ÖBB-Produktion")
+        st.markdown("• ÖBB Rail Tours Austria")
+        st.markdown("• ÖBB-Werbung")
 
     # Consulting Companies Section
     st.markdown('<div class="section-header">🎯 Consulting Companies Tracked</div>', unsafe_allow_html=True)
@@ -1172,49 +1348,14 @@ def create_disclaimer_page():
         for company in tech_consulting:
             st.markdown(f"• {company}")
 
-    # Methodology Section
-    st.markdown('<div class="section-header">📋 Methodology & Classification</div>', unsafe_allow_html=True)
-
-    st.markdown("""
-    ### Consulting Company Identification:
-    - Companies are identified through string matching against supplier names in the procurement data
-    - Classification is based on primary business focus (strategy, technology, specialized services)
-    - The system automatically flags contracts awarded to these firms for specialized analysis
-
-    ### Data Processing:
-    - All financial values are cleaned and standardized for analysis
-    - Contract categories are mapped using CPV (Common Procurement Vocabulary) codes
-    - Temporal data is processed to enable trend analysis
-    - Supplier names are standardized to ensure accurate company matching
-
-    ### Currency & Formatting:
-    - All monetary values are displayed in Euros (€)
-    - Numbers use comma separators for improved readability (e.g., €1,234,567)
-    - Percentages and ratios are rounded to appropriate decimal places
-    """)
-
-    # Disclaimer Section
+    # Brief Disclaimer
     st.markdown('<div class="section-header">⚠️ Disclaimer</div>', unsafe_allow_html=True)
 
     st.markdown("""
-    ### Data Accuracy:
-    - This dashboard is based on publicly available data from OffeneVergaben.at
-    - Data accuracy depends on the completeness and correctness of source information
-    - Users should verify critical information independently before making business decisions
-
-    ### Consulting Classification:
-    - Consulting company classification is automated based on name matching
-    - Some companies may provide both consulting and non-consulting services
-    - Classification may not capture all consulting activities or may include non-consulting contracts
-
-    ### Usage Guidelines:
-    - This tool is intended for market research and competitive intelligence purposes
-    - Information should be used in compliance with applicable competition and data protection laws
-    - Commercial use of this analysis should consider appropriate data licensing requirements
-
-    ### Updates:
-    - Data reflects procurement information available at the time of last scraping
-    - For the most current information, users should consult OffeneVergaben.at directly
+    - Data sourced from **OffeneVergaben.at** (public procurement platform)
+    - Consulting firms identified via automated name matching
+    - All monetary values in Euros (€)
+    - For market research and competitive intelligence purposes only
     """)
 
     # Footer
@@ -1236,7 +1377,7 @@ def main():
 
     st.sidebar.title("📊 Ausschreibungs-Dashboard")
 
-    # Navigation - Add disclaimer page
+    # Navigation
     page = st.sidebar.selectbox(
         "Choose Analysis:",
         [
@@ -1245,7 +1386,6 @@ def main():
             "Market Share Analysis",
             "Competitive Intelligence",
             "Category Analysis",
-            "Timeline Analysis",
             "Company Deep Dive"
         ]
     )
@@ -1288,12 +1428,12 @@ def main():
     if selected_subsidiaries != st.session_state.selected_subsidiaries:
         st.session_state.selected_subsidiaries = selected_subsidiaries
 
-    # Filter data by selected subsidiaries
+    # Filter data by selected subsidiaries (using grouped names)
     if not selected_subsidiaries:
         st.sidebar.warning("⚠️ Please select at least one subsidiary to analyze.")
         st.stop()
 
-    df = df_all[df_all['subsidiary_name'].isin(selected_subsidiaries)].copy()
+    df = df_all[df_all['subsidiary_group'].isin(selected_subsidiaries)].copy()
 
     # Display subsidiary selection info
     st.sidebar.info(f"📊 **Selected**: {len(selected_subsidiaries)} of {len(available_subsidiaries)} subsidiaries")
@@ -1375,15 +1515,13 @@ def main():
 
     # Display selected page
     if page == "Market Overview":
-        create_market_overview(df_filtered)  # Use all filtered data (subsidiaries + consulting)
+        create_market_overview(df_filtered, company_filter)  # Pass company filter for conditional visualization
     elif page == "Market Share Analysis":
         create_market_share_analysis(df_filtered)
     elif page == "Competitive Intelligence":
         create_consulting_competitive_analysis(df_filtered)
     elif page == "Category Analysis":
         create_category_analysis(df_filtered)
-    elif page == "Timeline Analysis":
-        create_timeline_analysis(df_filtered)
     elif page == "Company Deep Dive":
         create_company_deep_dive(df_filtered)
 
