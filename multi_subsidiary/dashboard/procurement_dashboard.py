@@ -431,7 +431,7 @@ def create_market_overview(df, company_filter="All Companies"):
         df = df_with_dates[(df_with_dates['Year'] >= start_year) & (df_with_dates['Year'] <= end_year)].copy()
 
         # Show selected period info
-        st.info(f"📊 Showing data from **{start_year}** to **{end_year}** ({len(df):,} contracts)")
+        st.info(f"📊 Showing data from **January {start_year}** to **December {end_year}** ({len(df):,} contracts)")
     else:
         st.warning("⚠️ No valid date information available for time filtering")
 
