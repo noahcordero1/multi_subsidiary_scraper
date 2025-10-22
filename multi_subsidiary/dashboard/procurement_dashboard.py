@@ -696,7 +696,22 @@ def create_market_share_analysis(df):
         safe_display_image("horvath-partners.jpg", width=400)
 
     st.markdown('<div class="section-header">📈 Market Share Analysis</div>', unsafe_allow_html=True)
-    
+
+    # Add checkbox to exclude Rahmenvereinbarungen
+    exclude_rahmen = st.checkbox(
+        'Exclude "Rahmenvereinbarung mit mehreren Unternehmen"',
+        value=False,
+        key="exclude_rahmen_market_share",
+        help="Toggle to remove framework agreements from the analysis"
+    )
+
+    # Filter dataframe if checkbox is selected
+    if exclude_rahmen:
+        df = df[df['Lieferant_Clean'] != 'Rahmenvereinbarung mit mehreren Unternehmen'].copy()
+        st.info(f"📊 Showing data excluding framework agreements ({len(df):,} contracts)")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
     col1, col2 = st.columns(2)
     
     with col1:
@@ -780,7 +795,9 @@ def create_category_analysis(df):
         fig_cat.update_layout(
             height=500,
             showlegend=False,
-            title_font_color=MCKINSEY_COLORS['primary']
+            title_font_color=MCKINSEY_COLORS['primary'],
+            xaxis_title="Number of Contracts",
+            yaxis_title="Category"
         )
         st.plotly_chart(fig_cat, use_container_width=True)
     
@@ -798,7 +815,9 @@ def create_category_analysis(df):
         fig_cat_val.update_layout(
             height=500,
             showlegend=False,
-            title_font_color=MCKINSEY_COLORS['primary']
+            title_font_color=MCKINSEY_COLORS['primary'],
+            xaxis_title="Total Contract Value (€)",
+            yaxis_title="Category"
         )
         st.plotly_chart(fig_cat_val, use_container_width=True)
     
@@ -823,7 +842,9 @@ def create_category_analysis(df):
             fig_consulting_cat.update_layout(
                 height=400,
                 showlegend=False,
-                title_font_color=MCKINSEY_COLORS['primary']
+                title_font_color=MCKINSEY_COLORS['primary'],
+                xaxis_title="Number of Contracts",
+                yaxis_title="Category"
             )
             st.plotly_chart(fig_consulting_cat, use_container_width=True)
         
@@ -862,7 +883,9 @@ def create_category_analysis(df):
                 title="Consulting vs Non-Consulting by Category",
                 barmode='stack',
                 height=400,
-                title_font_color=MCKINSEY_COLORS['primary']
+                title_font_color=MCKINSEY_COLORS['primary'],
+                xaxis_title="Category",
+                yaxis_title="Number of Contracts"
             )
             st.plotly_chart(fig_comparison, use_container_width=True)
     
@@ -1008,26 +1031,12 @@ def create_company_deep_dive(df):
         )
         fig_cat.update_layout(
             showlegend=False,
-            title_font_color=MCKINSEY_COLORS['primary']
+            title_font_color=MCKINSEY_COLORS['primary'],
+            xaxis_title="Number of Contracts",
+            yaxis_title="Category"
         )
         st.plotly_chart(fig_cat, use_container_width=True)
-    
-    # Competition analysis
-    st.markdown('<div class="section-header">Competition Analysis</div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        avg_competition = company_data['Bieter'].mean()
-        market_avg_competition = df['Bieter'].mean()
-        st.metric("Avg Competition Faced", f"{avg_competition:.1f}", 
-                 f"{avg_competition - market_avg_competition:+.1f} vs market")
-    
-    with col2:
-        # Win rate approximation (assuming they won all contracts they appear in)
-        total_bids_estimated = company_data['Bieter'].sum()  # Rough estimate
-        win_rate = (len(company_data) / total_bids_estimated) * 100 if total_bids_estimated > 0 else 0
-        st.metric("Estimated Win Rate", f"{win_rate:.1f}%")
-    
+
     # Recent contracts
     st.markdown('<div class="section-header">Recent Contracts</div>', unsafe_allow_html=True)
     recent_contracts = company_data.nlargest(10, 'Aktualisiert')[
@@ -1087,19 +1096,46 @@ def create_consulting_competitive_analysis(df):
         st.plotly_chart(fig_value, use_container_width=True)
     
     with col2:
-        # Competition intensity analysis for consulting
-        fig_competition = px.scatter(
-            consulting_summary.reset_index(),
-            x='Avg Competition',
-            y='Avg Value (€)',
-            size='Contracts',
-            hover_name='Lieferant_Clean',
-            title="Competition vs. Contract Value",
-            color_discrete_sequence=[MCKINSEY_COLORS['accent3']]
-        )
+        # Competition intensity analysis for consulting - use log scale for better visibility
+        import plotly.graph_objects as go
+        import numpy as np
+
+        consulting_data = consulting_summary.reset_index()
+
+        # Create scatter plot with log scale on y-axis
+        fig_competition = go.Figure()
+
+        fig_competition.add_trace(go.Scatter(
+            x=consulting_data['Avg Competition'],
+            y=consulting_data['Avg Value (€)'],
+            mode='markers',
+            marker=dict(
+                size=consulting_data['Contracts'].apply(lambda x: min(max(x/5, 8), 40)),  # Scale bubble size
+                color=consulting_data['Avg Value (€)'],
+                colorscale=[[0, MCKINSEY_COLORS['light_blue']],
+                           [0.5, MCKINSEY_COLORS['secondary']],
+                           [1, MCKINSEY_COLORS['accent4']]],
+                showscale=False,
+                line=dict(width=1, color='white')
+            ),
+            text=consulting_data['Lieferant_Clean'],
+            hovertemplate='<b>%{text}</b><br>' +
+                         'Avg Competition: %{x:.1f}<br>' +
+                         'Avg Value: €%{y:,.0f}<br>' +
+                         '<extra></extra>'
+        ))
+
         fig_competition.update_layout(
+            title="Competition vs. Avg Contract Value (Log Scale)",
+            title_font_color=MCKINSEY_COLORS['primary'],
+            xaxis_title="Average Number of Bidders",
+            yaxis_title="Avg Contract Value (€)",
+            yaxis_type="log",  # Logarithmic scale for better visibility
             height=500,
-            title_font_color=MCKINSEY_COLORS['primary']
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+            yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)')
         )
         st.plotly_chart(fig_competition, use_container_width=True)
     
@@ -1353,6 +1389,7 @@ def create_disclaimer_page():
 
     st.markdown("""
     - Data sourced from **OffeneVergaben.at** (public procurement platform)
+    - Contracts with missing or invalid dates are excluded from time-based analysis
     - Consulting firms identified via automated name matching
     - All monetary values in Euros (€)
     - For market research and competitive intelligence purposes only
@@ -1525,16 +1562,16 @@ def main():
     elif page == "Company Deep Dive":
         create_company_deep_dive(df_filtered)
 
-    # Footer with subsidiary and analysis stats
+    # Footer with subsidiary and analysis stats (using filtered data)
     st.sidebar.markdown("---")
     st.sidebar.markdown("📊 **Dashboard Statistics**")
-    consulting_count = len(df[df['Is_Consulting'] == True])
-    total_count = len(df)
+    consulting_count = len(df_filtered[df_filtered['Is_Consulting'] == True])
+    total_count = len(df_filtered)
     if total_count > 0:
         st.sidebar.markdown(f"Total contracts: {total_count:,}")
         st.sidebar.markdown(f"Consulting: {consulting_count:,} ({consulting_count/total_count*100:.1f}%)")
         st.sidebar.markdown(f"Non-consulting: {total_count-consulting_count:,}")
-        st.sidebar.markdown(f"Total suppliers: {df['Lieferant_Clean'].nunique():,}")
+        st.sidebar.markdown(f"Total suppliers: {df_filtered['Lieferant_Clean'].nunique():,}")
         st.sidebar.markdown(f"Subsidiaries: {len(selected_subsidiaries):,}")
     else:
         st.sidebar.markdown("No data available for selected criteria")
